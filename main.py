@@ -166,7 +166,6 @@ async def check_subscription():
 
 schedule.daily(dt.time(hour = 23, minute=59), update_retries)
 schedule.minutely(dt.time(minute = 1), lambda: asyncio.run(check_subscription()))
-
 if __name__ == '__main__':
     register_promo(dp)
     register_payment_methods(dp)
