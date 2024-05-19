@@ -3,7 +3,7 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram import executor
 from scheduler import Scheduler
-import asyncio
+import asyncio, time
 from db import session, User
 import datetime as dt
 from create_bot import bot, dp, admins
@@ -17,6 +17,7 @@ from admin.stats import register_stats
 from user import register_user
 from keyboards import *
 from admin.utils import load_config
+import threading
 
 logging.basicConfig(level=logging.INFO)
 schedule = Scheduler()
@@ -170,6 +171,14 @@ async def check_subscription():
 
 schedule.daily(dt.time(hour = 23, minute=59), update_retries)
 schedule.minutely(dt.time(minute = 1), lambda: asyncio.run(check_subscription()))
+
+def run_tasks():
+    while True:
+        schedule.exec_jobs()
+        time.sleep(1)
+
+
+threading.Thread(target = lambda: run_tasks()).run()
 if __name__ == '__main__':
     register_promo(dp)
     register_payment_methods(dp)
