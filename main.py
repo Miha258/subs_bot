@@ -138,6 +138,7 @@ async def back_to_main_admin_menu(query: types.CallbackQuery, state: FSMContext)
 
 
 async def on_startup(dp):
+    threading.Thread(target = lambda: run_tasks()).run()
     await bot.set_my_commands([
         types.BotCommand("start", "Начать работу с ботом")
     ])
@@ -153,21 +154,22 @@ def update_retries():
 async def check_subscription():
     config = load_config()
     chat = config.get('chat')
-    users = session.query(User).filter_by(subscription_active = True).all()
-    if users:
-        try:
-            for user in users:
-                is_in_chat = await bot.get_chat_member(chat, user.id)
-                if user.subscription_to < dt.datetime.now() and is_in_chat:
-                    await bot.kick_chat_member(chat, user.id)
-                    for admin in admins:
-                        try:
-                            tg_user = await bot.get_chat(user.chat_id)
-                            await bot.send_message(admin, f"У @{tg_user.username} закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
-                        except Exception:
-                            await bot.send_message(admin, f"У пользователя закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
-        except Exception as e:
-            print(e)
+    if chat:
+        users = session.query(User).filter_by(subscription_active = True).all()
+        if users:
+            try:
+                for user in users:
+                    is_in_chat = await bot.get_chat_member(chat, user.id)
+                    if user.subscription_to < dt.datetime.now() and is_in_chat:
+                        await bot.kick_chat_member(chat, user.id)
+                        for admin in admins:
+                            try:
+                                tg_user = await bot.get_chat(user.chat_id)
+                                await bot.send_message(admin, f"У @{tg_user.username} закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
+                            except Exception:
+                                await bot.send_message(admin, f"У пользователя закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
+            except Exception as e:
+                print(e)
 
 schedule.daily(dt.time(hour = 23, minute=59), update_retries)
 schedule.minutely(dt.time(minute = 1), lambda: asyncio.run(check_subscription()))
@@ -178,7 +180,6 @@ def run_tasks():
         time.sleep(1)
 
 
-threading.Thread(target = lambda: run_tasks()).run()
 if __name__ == '__main__':
     register_promo(dp)
     register_payment_methods(dp)
