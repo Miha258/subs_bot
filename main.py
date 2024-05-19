@@ -67,23 +67,27 @@ async def process_personal_cabinet(message: types.Message, state: FSMContext):
     user = session.query(User).filter_by(chat_id=message.from_id).first()
     if not user:
         return
+    
+    if not user.subscription_from or not user.subscription_to:
+        return await message.answer("Чтобы использовать это меню нужно приобрести подписку")
+
     sub_to: dt.datetime = user.subscription_to
     if sub_to:
         text = f"""
 Статистика:
 
 Статус подписки: <strong>{"неактивна" if not user.subscription_active else "активна"}</strong>    
-Дата вступления: <strong>{user.subscription_from if user.subscription_from else "нет"}</strong>
-Дата окончания подписки: <strong>{user.subscription_to if user.subscription_to else "нет"}</strong>
-Осталось еще <strong>{(sub_to - dt.datetime.now()).days}</strong> к окончанию подписки
+Дата вступления: <strong>{user.subscription_from.strftime('%Y-%m-%d') if user.subscription_from else "нет"}</strong>
+Дата окончания подписки: <strong>{user.subscription_to.strftime('%Y-%m-%d') if user.subscription_to else "нет"}</strong>
+Осталось еще <strong>{(sub_to - dt.datetime.now()).days}</strong> дней к окончанию подписки
 """
     else:
         text = f"""
 Статистика:
 
 Статус подписки: <strong>{"неактивна" if not user.subscription_active else "активна"}</strong>    
-Дата вступления: <strong>{user.subscription_from if user.subscription_from else "нет"}</strong>
-Дата окончания подписки: <strong>{user.subscription_to if user.subscription_to else "нет"}</strong>
+Дата вступления: <strong>{user.subscription_from.strftime('%Y-%m-%d') if user.subscription_from else "нет"}</strong>
+Дата окончания подписки: <strong>{user.subscription_to.strftime('%Y-%m-%d') if user.subscription_to else "нет"}</strong>
 """
     await message.answer(text, reply_markup=get_user_panel_kb(user.subscription_active), parse_mode = "html")
 

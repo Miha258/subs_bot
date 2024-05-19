@@ -42,12 +42,12 @@ def get_tarrifs_list_kb(select = False):
                 months_text = 'месяца'
             else:
                 months_text = 'месяцев'
-
-            button_text = f"{tariff.months} {months_text}/{tariff.amount} usd"
+            
+            button_text = f"{tariff.months} {months_text}/{tariff.amount}$"
             callback_data =  f"select_tariff:{tariff.id}" if select else f"edit_tariff:{tariff.id}"
             keyboard.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
         if select:
-            keyboard.add(types.InlineKeyboardButton(button_text, callback_data="back_to_cabinet_menu"))
+            keyboard.add(types.InlineKeyboardButton("Назад", callback_data="back_to_cabinet_menu"))
     return keyboard
 
 async def view_tariffs(message: types.Message, state: FSMContext, _return = False):
@@ -160,7 +160,7 @@ async def edit_tariff_months(message: types.Message, state: FSMContext):
         await message.delete()
         target_msg = data["target_msg"]
         await target_msg.edit_text(
-        f'Редактирование тарифа:\nЦена: {tariff.amount} usd\nКоличество месяцев: {tariff.months}',
+        f'Редактирование тарифа:\nЦена: {tariff.amount}$\nКоличество месяцев: {tariff.months}',
         reply_markup=get_edit_tariff_kb(tariff)
     )
     except ValueError:

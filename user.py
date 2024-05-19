@@ -14,6 +14,7 @@ class UserStates(StatesGroup):
     ADD_EMAIL = State()
     CHOOSE_TARIF = State()
     CHOOSE_METHOD = State()
+    PROCCES_PAYNAMENT = State()
     SET_SCREENSHOT = State()
     SET_COMMENT = State()
     SET_COMMENT_ADMIN = State()
@@ -41,25 +42,23 @@ async def process_user_menu(query: types.CallbackQuery, state: FSMContext):
                 await query.answer("Вы использовали 3 попытки.Попробуйте завтра", show_alert = True)
         case "get_invite_on_notion":
             user = session.query(User).filter_by(chat_id = query.from_user.id).first()
-            for admin in admins:
-                await bot.send_message(admin, f"Пользователь @{query.from_user.username} запросил инвайт на Notion на email: <strong>{user.email}</strong>", parse_mode = "html")
+
+            if not user.email:
+                return await query.message.answer('Сначало установите email к Notion в личном кабинете')
+            if user.invite_link_retries != 0:
+                user.invite_link_retries = user.invite_link_retries - 1
+                for admin in admins:
+                    await bot.send_message(admin, f"Пользователь @{query.from_user.username} запросил инвайт на Notion на email: <strong>{user.email}</strong>", parse_mode = "html")
+            else:
+                await query.answer("Вы использовали все 3 попытки.Попробуйте завтра", show_alert = True)
 
 async def buy_subscription(query_or_message: types.CallbackQuery | types.Message, state: FSMContext):
-    user = session.query(User).filter_by(chat_id = query_or_message.from_user.id).first()
-    if not user.email:
-        text = "Перед покупкой тарифа нужно установить email к Notion в личном кабинете"
-        if isinstance(query_or_message, types.CallbackQuery):
-            await query_or_message.message.answer(text, reply_markup = get_tarrifs_list_kb(True))
-        else:
-            await query_or_message.answer(text, reply_markup = get_tarrifs_list_kb(True))
-
+    text = "Пожалуйста выберите длительность подписки ниже:"
+    if isinstance(query_or_message, types.CallbackQuery):
+        await query_or_message.message.answer(text, reply_markup = get_tarrifs_list_kb(True))
     else:
-        text = "Пожалуйста выберите длительность подписки ниже:"
-        if isinstance(query_or_message, types.CallbackQuery):
-            await query_or_message.message.answer(text, reply_markup = get_tarrifs_list_kb(True))
-        else:
-            await query_or_message.answer(text, reply_markup = get_tarrifs_list_kb(True))
-        await state.set_state(UserStates.CHOOSE_TARIF)
+        await query_or_message.answer(text, reply_markup = get_tarrifs_list_kb(True))
+    await state.set_state(UserStates.CHOOSE_TARIF)
 
 async def process_promocode(message: types.Message, state: FSMContext):
     code = message.text.strip()
@@ -115,11 +114,11 @@ async def select_method(query: types.CallbackQuery, state: FSMContext):
     method_id = int(query.data.split(':')[1])
     await state.update_data({"method_id": method_id})
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-        types.InlineKeyboardButton("Оплатить", callback_data="procces_paynament"),
-        types.InlineKeyboardButton("Назад", callback_data="back_to_cabinet_menu")
+        [types.InlineKeyboardButton("Оплатить", callback_data="procces_paynament")],
+        [types.InlineKeyboardButton("Назад", callback_data="back_to_cabinet_menu")]
     ])
     await query.message.answer('Вы получаете доступ к следующим ресурсам: Дао, Нотион Дао', reply_markup = keyboard)
-
+    await state.set_state(UserStates.PROCCES_PAYNAMENT)
 
 async def procces_paynament(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -134,14 +133,16 @@ async def procces_paynament(query: types.CallbackQuery, state: FSMContext):
     if user.promo_id:
         promo = session.query(Promocode).filter_by(id = user.promo_id).first()
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-        types.InlineKeyboardButton("Я оплатил", callback_data=f"proof_paynament:{trans.id}"),
+        [types.InlineKeyboardButton("Я оплатил", callback_data=f"proof_paynament:{trans.id}")],
     ])
     
     await query.message.answer(f"""
-Способ оплаты: {method.network}
+Ваш чек:      
+
+Способ оплаты: <strong>{method.network}</strong>
 Адрес кошелька для оплаты: <pre>{method.wallet_address}</pre>
-Сумма к оплате: {tariff.amount - tariff.amount * (promo.discount / 100) if promo else tariff.amount} usd
-Промокод: {'Нет' if not promo else promo.code}
+Сумма к оплате: <strong>{tariff.amount - tariff.amount * (promo.discount / 100) if promo else tariff.amount}$</strong>
+Промокод: <strong>{'Нет' if not promo else promo.code}</strong>
 """, reply_markup = keyboard, parse_mode = "html")
     await state.finish()
 
@@ -177,18 +178,20 @@ async def give_for_checking(message: types.Message, state: FSMContext):
         promo = session.query(Promocode).filter_by(id = user.promo_id).first()
     
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-        types.InlineKeyboardButton("Подтвердить", callback_data=f"confirm_paynament:{trans.id}"),
-        types.InlineKeyboardButton("Отклонить с комментарием", callback_data=f"cancle_paynament:{trans.id}"),  
+        [types.InlineKeyboardButton("Подтвердить", callback_data=f"confirm_paynament:{trans.id}")],
+        [types.InlineKeyboardButton("Отклонить с комментарием", callback_data=f"cancle_paynament:{trans.id}")],  
     ])
     for admin in admins:
-        await message.answer_photo(data["screen"], f"""
-Способ оплаты: {admin}
+        await bot.send_photo(admin, data["screen"].file_id, f"""
+Чек оплаты {message.from_user.mention}:           
+
+Способ оплаты: <strong>{admin}</strong>
 Адрес кошелька для оплаты: <pre>{method.wallet_address}</pre>
-Сумма к оплате: {tariff.amount - tariff.amount * (promo.discount / 100) if promo else tariff.amount} usd
-Почта к Notion: <pre>{user.email}</pre>
-Коментарий: {message.text}
-Промокод: {'Нет' if not promo else promo.code}
+Сумма к оплате: <strong>{tariff.amount - tariff.amount * (promo.discount / 100) if promo else tariff.amount}$ </strong>
+Коментарий: <strong>{message.text}</strong>
+Промокод: <strong>{'Нет' if not promo else promo.code}</strong>
 """, reply_markup = keyboard, parse_mode = "html")
+    await state.finish()
 
 
 async def cancle_with_comment_paynament(query: types.CallbackQuery, state: FSMContext):
@@ -203,12 +206,13 @@ async def send_comment_to_user(message: types.Message, state: FSMContext):
     trans = session.query(Transaction).filter_by(id=trans_id).first()
     user = session.query(User).filter_by(chat_id=trans.user_id).first()
     comment = message.text
-
+    
     trans.comfired = False
     session.commit()
     await bot.send_message(
-        user.id,
-        f"Ваш платеж был отклонен. Причина: {comment}"
+        user.chat_id,
+        f"Ваш платеж был отклонен.\nПричина: <strong>{comment}</strong>",
+        parse_mode = "html"
     )
     await message.answer("Платеж пользователя был отклонен.")
     await state.finish()
@@ -229,11 +233,15 @@ async def accept_paynament_comment_to_user(query: types.CallbackQuery, state: FS
     user.subscription_active = True
     if user.promo_id:
         user.promo_id = None
-    session.commit()
+    
+    if not user.subscription_from:
+        user.subscription_from = datetime.now()
 
+    session.commit()
     await bot.send_message(
-        user.id,
-        f"Ваш платеж был подтвержден. Ваша подписка активна до {user.subscription_to.strftime('%Y-%m-%d')}."
+        user.chat_id,
+        f"Ваш платеж был подтвержден. Ваша подписка активна до <strong>{user.subscription_to.strftime('%Y-%m-%d')}</strong>",
+        parse_mode = "html"
     )
     await query.message.answer("Платеж пользователя успешно был подтвержден.")
     await state.finish()
@@ -241,16 +249,17 @@ async def accept_paynament_comment_to_user(query: types.CallbackQuery, state: FS
 
 async def back_to_cabinet_menu(query: types.CallbackQuery, state: FSMContext):
     await state.finish()
-    user = session.query(User).filter_by(id = query.from_user.id).first()
+    user = session.query(User).filter_by(chat_id = query.from_user.id).first()
     sub_to: datetime = user.subscription_to
-    await query.message.answer(f"""
+    text = f"""
 Статистика:
 
-Статус подписки: {user.subscription_active}    
-Дата вступления: {user.subscription_from}
-Дата окончания подписки {user.subscription_to}
-Осталось еще {(sub_to - datetime.now()).days} к окончанию подписки
-    """, get_user_panel_kb(user.subscription_active))
+Статус подписки: <strong>{"неактивна" if not user.subscription_active else "активна"}</strong>    
+Дата вступления: <strong>{user.subscription_from.strftime('%Y-%m-%d') if user.subscription_from else "нет"}</strong>
+Дата окончания подписки: <strong>{user.subscription_to.strftime('%Y-%m-%d') if user.subscription_to else "нет"}</strong>
+Осталось еще <strong>{(sub_to - datetime.now()).days}</strong> дней к окончанию подписки
+"""
+    await query.message.answer(text, get_user_panel_kb(user.subscription_active), parse_mode = "html")
     await query.message.delete()
 
 async def back_to_user_menu(query: types.CallbackQuery, state: FSMContext):
@@ -272,12 +281,12 @@ def register_user(dp: Dispatcher):
     dp.register_message_handler(buy_subscription, text = 'Приобрести подписку', state = "*")
     dp.register_callback_query_handler(select_tariff, state = UserStates.CHOOSE_TARIF)
     dp.register_callback_query_handler(select_method, state = UserStates.CHOOSE_METHOD)
-    dp.register_callback_query_handler(procces_paynament, lambda cb: cb.data == 'procces_paynament')
+    dp.register_callback_query_handler(procces_paynament, lambda cb: cb.data == 'procces_paynament', state = UserStates.PROCCES_PAYNAMENT)
     dp.register_callback_query_handler(proof_paynament, lambda cb: 'proof_paynament' in cb.data)
     dp.register_message_handler(proof_paynament_text, content_types = types.ContentTypes.PHOTO, state = UserStates.SET_SCREENSHOT)
     dp.register_message_handler(give_for_checking, state = UserStates.SET_COMMENT)
     dp.register_message_handler(process_promocode, state = UserStates.PROMOCODE)
     dp.register_message_handler(process_email, state = UserStates.ADD_EMAIL)
-    dp.register_callback_query_handler(cancle_with_comment_paynament, lambda cb: 'cancle_paynament' in cb.data)
+    dp.register_callback_query_handler(cancle_with_comment_paynament, lambda cb: 'cancle_paynament' in cb.data, state = "*")
     dp.register_message_handler(send_comment_to_user, state=UserStates.SET_COMMENT_ADMIN)
-    dp.register_callback_query_handler(accept_paynament_comment_to_user, lambda cb: 'confirm_paynament' in cb.data)
+    dp.register_callback_query_handler(accept_paynament_comment_to_user, lambda cb: 'confirm_paynament' in cb.data, state = "*")

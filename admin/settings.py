@@ -14,33 +14,34 @@ class GlobalSettingsStates(StatesGroup):
 settings_msg = None
 async def send_settings_menu(message: types.Message, _return = False):
     keyboard = InlineKeyboardMarkup(row_width=1)
-    config = load_config()
     buttons = [
         # InlineKeyboardButton("Установить токен API для Notion", callback_data="set_notion_token"),
         InlineKeyboardButton("Установить чат", callback_data="set_chat_id"),
         InlineKeyboardButton("Установить контакт поддержки", callback_data="set_support"),
     ]
+
+    config = load_config()
     chat_id = config.get('chat')
+    chat = None
     if chat_id:
         chat = await bot.get_chat(chat_id)
     keyboard.add(*buttons)
     text = f"""
 Выберите параметр, который вы хотите настроить:
                         
-Notion API токен: <pre>{config.get("notion_api_token")}</pre>
-Цена тарифа: <strong>{config.get("tariff_price")}</strong>
-Телеграм чат: <strong>{chat.username if chat_id else ""}</strong>
+Телеграм чат: <strong>{chat.title if chat else ""}</strong>
 Контакт поддержки: <strong>{config.get("support")}</strong>
     """
     if not _return:
-        await message.answer(text, reply_markup = keyboard, parse_mode = "html")
+        return await message.answer(text, reply_markup = keyboard, parse_mode = "html")
     else:
-        return text
+        return text, keyboard
 
 
 
-async def settins_menu(message: types.Message):
-    await send_settings_menu(message)
+async def settins_menu(message: types.Message, state: FSMContext):
+    msg = await send_settings_menu(message)
+    await state.set_data({"target_msg": msg})
 
 
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
@@ -72,15 +73,23 @@ async def set_chat_id(message: types.Message, state: FSMContext):
         await bot.get_chat(message.text)
     except Exception:
         return await message.answer('Не могу найти чат, попробуйте другой')
-    change_param('set_chat_id', message.text)
-    text = await send_settings_menu(message, True)
-    await message.edit_text(text, parse_mode = "html")
+    data = await state.get_data()
+    target_msg = data["target_msg"]
+    
+    change_param('chat', message.text)
+    await message.delete()
+    text, keyboard = await send_settings_menu(message, True)
+    await target_msg.edit_text(text, parse_mode = "html", reply_markup = keyboard)
     await state.finish()
 
 async def set_support(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    target_msg = data["target_msg"]
+
     change_param('support', message.text)
-    text = await send_settings_menu(message, True)
-    await message.edit_text(text, parse_mode = "html")
+    await message.delete()
+    text, keyboard = await send_settings_menu(message, True)
+    await target_msg.edit_text(text, parse_mode = "html", reply_markup = keyboard)
     await state.finish()
 
 
