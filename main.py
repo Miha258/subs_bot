@@ -138,7 +138,7 @@ async def back_to_main_admin_menu(query: types.CallbackQuery, state: FSMContext)
 
 
 async def on_startup(dp):
-    threading.Thread(target = lambda: run_tasks()).run()
+    threading.Thread(target = lambda: run_tasks()).start()
     await bot.set_my_commands([
         types.BotCommand("start", "Начать работу с ботом")
     ])
