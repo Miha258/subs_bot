@@ -4,6 +4,7 @@ from aiogram.dispatcher import FSMContext
 from create_bot import *
 from admin.utils import *
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from create_bot import admins
 
 
 class GlobalSettingsStates(StatesGroup):
@@ -94,7 +95,7 @@ async def set_support(message: types.Message, state: FSMContext):
 
 
 def register_settins(dp: Dispatcher):
-    dp.register_message_handler(settins_menu, lambda message: message.text == 'Настройки', state = "*")
+    dp.register_message_handler(settins_menu, lambda m: m.from_id in admins, lambda message: message.text == 'Настройки', state = "*")
     dp.register_callback_query_handler(process_callback, lambda callback_query: callback_query.data in ["set_notion_token", "set_chat_id", "set_support"])
     dp.register_message_handler(set_chat_id, state = GlobalSettingsStates.CHAT)
     dp.register_message_handler(set_notion_token, state = GlobalSettingsStates.NOTION_TOKEN)

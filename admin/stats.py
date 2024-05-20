@@ -2,6 +2,7 @@ from aiogram import types, Dispatcher
 from db import session, User, Transaction
 from sqlalchemy import func
 from datetime import datetime, timedelta
+from create_bot import admins
 
 
 async def get_stats(message: types.Message):
@@ -20,4 +21,4 @@ async def get_stats(message: types.Message):
     await message.answer(stats_message, parse_mode = "html")
 
 def register_stats(dp: Dispatcher):
-    dp.register_message_handler(get_stats, text = 'Статистика', state = "*")
+    dp.register_message_handler(get_stats, lambda m: m.from_id in admins, text = 'Статистика', state = "*")

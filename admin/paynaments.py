@@ -2,6 +2,7 @@ from db import session, PaymentMethod
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from create_bot import admins
 
 class PaymentMethodCreation(StatesGroup):
     NETWORK = State()
@@ -128,7 +129,7 @@ async def back_to_payment_methods_list(query: types.CallbackQuery, state: FSMCon
 
 
 def register_payment_methods(dp: Dispatcher):
-    dp.register_message_handler(view_payment_methods, text = 'Способы оплаты', state = "*")
+    dp.register_message_handler(view_payment_methods, lambda m: m.from_id in admins, text = 'Способы оплаты', state = "*")
     dp.register_callback_query_handler(back_to_payment_methods_list, lambda cb: cb.data == 'back_to_payment_methods', state = "*")
     dp.register_callback_query_handler(edit_payment_method, lambda cb: "edit_payment_method" in cb.data)
     dp.register_callback_query_handler(edit_payment_method_handler, state= EditPaymentMethodState.EDITING)

@@ -3,7 +3,7 @@ from aiogram.dispatcher import FSMContext
 from datetime import datetime, timedelta
 from db import User, session
 import asyncio
-from create_bot import bot
+from create_bot import bot, admins
 import calendar
 from keyboards import back_to_menu, launch_adds
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -161,7 +161,7 @@ async def send_confirm_adds(message_or_query: types.Message, state: FSMContext):
     await state.set_state(SendInfo.CONFIRM)
 
 def register_adds(dp: Dispatcher):
-    dp.register_message_handler(proccess_new_add, text = 'Сделать рассылку', state = "*")
+    dp.register_message_handler(proccess_new_add, lambda m: m.from_id in admins, text = 'Сделать рассылку', state = "*")
     dp.register_message_handler(ask_for_media, state = SendInfo.SET_TYPE)
     dp.register_message_handler(ask_for_text, state = SendInfo.SET_MEDIA, content_types = [types.ContentType.PHOTO, types.ContentType.VIDEO])
     dp.register_message_handler(skip_media, lambda m: m.text in "Пропустить", state = SendInfo.SET_MEDIA)

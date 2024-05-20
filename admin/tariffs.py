@@ -1,6 +1,7 @@
 from db import session, Tariffs
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
+from create_bot import admins
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 class TariffsCreationState(StatesGroup):
@@ -173,7 +174,7 @@ async def back_to_tariffs_list(query: types.CallbackQuery, state: FSMContext):
 
 
 def register_tariffs(dp: Dispatcher):
-    dp.register_message_handler(view_tariffs, text = 'Управлять тарифами', state = "*")
+    dp.register_message_handler(view_tariffs, lambda m: m.from_id in admins, text = 'Управлять тарифами', state = "*")
     dp.register_callback_query_handler(back_to_tariffs_list, lambda cb: cb.data == 'back_to_tariffs_list', state = "*")
     dp.register_callback_query_handler(edit_tariff, lambda cb: "edit_tariff" in cb.data)
     dp.register_callback_query_handler(edit_tariff_handler, state= EditTariffsState.EDITING)

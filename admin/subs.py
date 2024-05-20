@@ -1,5 +1,5 @@
 from db import session, User
-from create_bot import bot
+from create_bot import bot, admins
 from datetime import timedelta
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
@@ -26,5 +26,5 @@ async def extend_subscriptions(message: types.Message, state: FSMContext):
 
 
 def register_subs(dp: Dispatcher):
-    dp.register_message_handler(set_subs, text = "Продлить подписку", state = "*")
+    dp.register_message_handler(set_subs, lambda m: m.from_id in admins, text = "Продлить подписку", state = "*")
     dp.register_message_handler(extend_subscriptions, state = SubsStates.SUBS_COUNT)

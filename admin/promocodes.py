@@ -4,6 +4,7 @@ from db import session, Promocode
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from create_bot import admins
 
 
 class SubscriptionPromo(StatesGroup):
@@ -215,7 +216,7 @@ async def back_to_promo_list(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text(text, reply_markup = kb)
 
 def register_promo(dp: Dispatcher):
-    dp.register_message_handler(view_promocodes, text = 'Управлять промокодами', state = "*")
+    dp.register_message_handler(view_promocodes, lambda m: m.from_id in admins, text = 'Управлять промокодами', state = "*")
     dp.register_callback_query_handler(back_to_promo_list, lambda cb: cb.data == 'back_to_promo_list', state = "*")
     dp.register_callback_query_handler(create_subscription_promocode, lambda cb: cb.data == 'add_promo')
     dp.register_callback_query_handler(edit_promocode, lambda cb: "edit_promo" in cb.data)
