@@ -50,12 +50,9 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
     data = callback_query.data
     chat_id = callback_query.message.chat.id
     
-    if data == "set_notion_token":
-        await state.set_state(GlobalSettingsStates.NOTION_TOKEN)
-        await bot.send_message(chat_id, "Введіть своє значення FDV:")
-    elif data == "set_chat_id":
+    if data == "set_chat_id":
         await state.set_state(GlobalSettingsStates.CHAT)
-        await bot.send_message(chat_id, "Введіть айди чата:")
+        await bot.send_message(chat_id, "Введите айди чата:")
     elif data == "set_support":
         await state.set_state(GlobalSettingsStates.SUPPORT)
 
@@ -96,7 +93,7 @@ async def set_support(message: types.Message, state: FSMContext):
 
 def register_settins(dp: Dispatcher):
     dp.register_message_handler(settins_menu, lambda m: m.from_id in admins, lambda message: message.text == 'Настройки', state = "*")
-    dp.register_callback_query_handler(process_callback, lambda callback_query: callback_query.data in ["set_notion_token", "set_chat_id", "set_support"])
+    dp.register_callback_query_handler(process_callback, lambda callback_query: callback_query.data in ["set_chat_id", "set_support"], state = "*")
     dp.register_message_handler(set_chat_id, state = GlobalSettingsStates.CHAT)
     dp.register_message_handler(set_notion_token, state = GlobalSettingsStates.NOTION_TOKEN)
     dp.register_message_handler(set_support, state = GlobalSettingsStates.SUPPORT)
