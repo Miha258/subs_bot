@@ -47,8 +47,11 @@ async def process_user_menu(query: types.CallbackQuery, state: FSMContext):
                 return await query.message.answer('Сначало установите email к Notion в личном кабинете')
             if user.invite_link_retries != 0:
                 user.invite_link_retries = user.invite_link_retries - 1
+                kb = types.InlineKeyboardMarkup(inline_keyboard = [[
+                    types.InlineKeyboardButton('Отправилено', callback_data = f"notion_invite:{query.from_user.id}")
+                ]])
                 for admin in admins:
-                    await bot.send_message(admin, f"Пользователь @{query.from_user.username} запросил инвайт на Notion на email: <strong>{user.email}</strong>", parse_mode = "html")
+                    await bot.send_message(admin, f"Пользователь @{query.from_user.username} запросил инвайт на Notion на email: <strong>{user.email}</strong>", parse_mode = "html", reply_markup = kb)
             else:
                 await query.answer("Вы использовали все 3 попытки.Попробуйте завтра", show_alert = True)
 
@@ -96,6 +99,14 @@ async def process_email(message: types.Message, state: FSMContext):
     await state.finish()
 
 
+
+async def confirm_notion_invite(query: types.CallbackQuery):
+    user_id = query.data.split(':')[-1]
+    await bot.send_message(user_id, "По вашему запросу вам было отправлено приглашение на Notion на ваш email")
+    await query.message.delete()
+
+
+
 async def select_tariff(query: types.CallbackQuery, state: FSMContext):
     tariff_id = int(query.data.split(':')[1])
     await state.set_data({"tariff_id": tariff_id})
@@ -106,7 +117,7 @@ async def select_tariff(query: types.CallbackQuery, state: FSMContext):
         callback_data = f"select_payment_method:{method.id}"
         keyboard.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
     keyboard.add(types.InlineKeyboardButton("Назад", callback_data="back_to_cabinet_menu"))
-    await query.message.answer('Вибирите тариф:', reply_markup = keyboard)
+    await query.message.answer('Вибирите способ оплаты:', reply_markup = keyboard)
     await state.set_state(UserStates.CHOOSE_METHOD)
 
 
@@ -238,11 +249,22 @@ async def accept_paynament_comment_to_user(query: types.CallbackQuery, state: FS
         user.subscription_from = datetime.now()
 
     session.commit()
+    
     await bot.send_message(
         user.chat_id,
         f"Ваш платеж был подтвержден. Ваша подписка активна до <strong>{user.subscription_to.strftime('%Y-%m-%d')}</strong>",
         parse_mode = "html"
     )
+    sub_to: datetime = user.subscription_to
+    text = f"""
+Статистика:
+
+Статус подписки: <strong>{"неактивна" if not user.subscription_active else "активна"}</strong>    
+Дата вступления: <strong>{user.subscription_from.strftime('%Y-%m-%d') if user.subscription_from else "нет"}</strong>
+Дата окончания подписки: <strong>{user.subscription_to.strftime('%Y-%m-%d') if user.subscription_to else "нет"}</strong>
+Осталось еще <strong>{(sub_to - datetime.now()).days}</strong> дней к окончанию подписки
+"""
+    await bot.send_message(user.chat_id, text, reply_markup = get_user_panel_kb(user.subscription_active), parse_mode = "html")
     await query.message.answer("Платеж пользователя успешно был подтвержден.")
     await state.finish()
 
@@ -281,6 +303,7 @@ def register_user(dp: Dispatcher):
     dp.register_message_handler(buy_subscription, text = 'Приобрести подписку', state = "*")
     dp.register_callback_query_handler(select_tariff, state = UserStates.CHOOSE_TARIF)
     dp.register_callback_query_handler(select_method, state = UserStates.CHOOSE_METHOD)
+    dp.register_callback_query_handler(confirm_notion_invite, lambda cb: "notion_invite" in cb.data in cb.data, state = "*")
     dp.register_callback_query_handler(procces_paynament, lambda cb: cb.data == 'procces_paynament', state = UserStates.PROCCES_PAYNAMENT)
     dp.register_callback_query_handler(proof_paynament, lambda cb: 'proof_paynament' in cb.data)
     dp.register_message_handler(proof_paynament_text, content_types = types.ContentTypes.PHOTO, state = UserStates.SET_SCREENSHOT)

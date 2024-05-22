@@ -38,7 +38,7 @@ def get_main_admin_menu_kb():
 
 def get_user_panel_kb(is_subscribed = False):
     keyboard_markup = types.InlineKeyboardMarkup(inline_keyboard = [
-        [types.InlineKeyboardButton(text = "Приобрести подписку", callback_data = "buy_subscription")] if not is_subscribed else [types.InlineKeyboardButton(text = "Продлить подпсику", callback_data = "buy_subscription")],
+        [types.InlineKeyboardButton(text = "Приобрести подписку", callback_data = "buy_subscription")] if not is_subscribed else [types.InlineKeyboardButton(text = "Продлить подписку", callback_data = "buy_subscription")],
         [types.InlineKeyboardButton(text = "Использовать промокод", callback_data = "use_promocode")],
         [types.InlineKeyboardButton(text = 'Подключить свой емейл к Notion', callback_data = "add_notion_email")]
     ])
