@@ -37,14 +37,13 @@ def get_main_admin_menu_kb():
     return keyboard_markup
 
 def get_user_panel_kb(is_subscribed = False):
-    keyboard_markup = types.InlineKeyboardMarkup(inline_keyboard = [
-        [types.InlineKeyboardButton(text = "Приобрести подписку", callback_data = "buy_subscription")] if not is_subscribed else [types.InlineKeyboardButton(text = "Продлить подписку", callback_data = "buy_subscription")],
-        [types.InlineKeyboardButton(text = "Использовать промокод", callback_data = "use_promocode")],
-        [types.InlineKeyboardButton(text = 'Подключить свой емейл к Notion', callback_data = "add_notion_email")]
-    ])
-   
+    keyboard_markup = types.InlineKeyboardMarkup()
     if is_subscribed:
-        keyboard_markup.add(types.InlineKeyboardButton(text = 'Получить инвайт в группу в тг', callback_data = "get_invite_on_tg"),)
-        keyboard_markup.add(types.InlineKeyboardButton(text = 'Получить инвайт в Notion', callback_data = "get_invite_on_notion"),)
+        keyboard_markup.add(types.InlineKeyboardButton(text = 'Получить инвайт в группу в тг', callback_data = "get_invite_on_tg"))
+        keyboard_markup.add(types.InlineKeyboardButton(text = 'Подключить свой емейл к Notion', callback_data = "add_notion_email"))
+        keyboard_markup.add(types.InlineKeyboardButton(text = 'Получить инвайт в Notion', callback_data = "get_invite_on_notion"))
+
+    keyboard_markup.add(types.InlineKeyboardButton(text = "Приобрести подписку" if not is_subscribed else "Продлить подписку", callback_data = "buy_subscription"))
+    keyboard_markup.add(types.InlineKeyboardButton(text = "Использовать промокод", callback_data = "use_promocode"))
     keyboard_markup.add(types.InlineKeyboardButton(text = 'Вернуться', callback_data = 'back_to_user_menu'))
     return keyboard_markup

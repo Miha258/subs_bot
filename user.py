@@ -48,7 +48,7 @@ async def process_user_menu(query: types.CallbackQuery, state: FSMContext):
             if user.invite_link_retries != 0:
                 user.invite_link_retries = user.invite_link_retries - 1
                 kb = types.InlineKeyboardMarkup(inline_keyboard = [[
-                    types.InlineKeyboardButton('Отправилено', callback_data = f"notion_invite:{query.from_user.id}")
+                    types.InlineKeyboardButton('Отправлено', callback_data = f"notion_invite:{query.from_user.id}")
                 ]])
                 for admin in admins:
                     await bot.send_message(admin, f"Пользователь @{query.from_user.username} запросил инвайт на Notion на email: <strong>{user.email}</strong>", parse_mode = "html", reply_markup = kb)
