@@ -73,15 +73,15 @@ async def process_promocode(message: types.Message, state: FSMContext):
     code = message.text.strip()
     promocode = session.query(Promocode).filter_by(code=code).first()
 
-    if promocode.activations_left <= 0:
-        session.delete(promocode)
-        session.commit()
-        return await message.answer("Промокод недействителен")
-
     if not promocode:
         await message.answer("Промокод недействителен или уже использован.")
         await state.finish()
         return
+
+    if promocode.activations_left <= 0:
+        session.delete(promocode)
+        session.commit()
+        return await message.answer("Промокод недействителен")
 
     user = session.query(User).filter_by(chat_id=message.from_user.id).first()
     if promocode.type == 'Подписка':
@@ -89,6 +89,7 @@ async def process_promocode(message: types.Message, state: FSMContext):
             user.subscription_to += timedelta(days=promocode.days)
         else:
             user.subscription_to = datetime.now() + timedelta(days=promocode.days)
+            user.subscription_from = datetime.now()
         user.subscription_active = True
         await message.answer(f"Ваша подписка продлена до {user.subscription_to.strftime('%Y-%m-%d')}.")
     elif promocode.type == 'Скидка':

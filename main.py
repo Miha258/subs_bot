@@ -66,11 +66,12 @@ async def send_welcome_message(message: types.Message):
 @dp.message_handler(lambda m: m.text == "Личный кабинет", state="*")
 async def process_personal_cabinet(message: types.Message, state: FSMContext):
     await state.finish()
+    
     user = session.query(User).filter_by(chat_id=message.from_id).first()
     if not user:
         return
     
-    if not user.subscription_from or not user.subscription_to:
+    if not user.subscription_from and not user.subscription_to:
         return await message.answer("Чтобы использовать это меню нужно приобрести подписку")
 
     sub_to: dt.datetime = user.subscription_to
