@@ -5,6 +5,7 @@ from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from create_bot import admins
+from keyboards import get_main_admin_menu_kb
 
 
 class SubscriptionPromo(StatesGroup):
@@ -204,7 +205,7 @@ async def process_activations(message: types.Message, state: FSMContext):
             promo = Promocode(code = code, discount = data.get("percent"), days = data.get('days'), activations_left = activations, type = data["type"])
             session.add(promo)
             session.commit()
-            await message.answer(f'Промокод <strong>{code}</strong> успешно создан!', parse_mode = "html")
+            await message.answer(f'Промокод <strong>{code}</strong> успешно создан!', parse_mode = "html", reply_markup = get_main_admin_menu_kb())
             await view_promocodes(message, state)
             await state.finish()
     except ValueError:
@@ -230,5 +231,3 @@ def register_promo(dp: Dispatcher):
     dp.register_message_handler(process_promo_percent, state = SubscriptionPromo.PERCENT)
     dp.register_message_handler(process_promo_days, state = SubscriptionPromo.DAYS)
     dp.register_message_handler(process_activations, state = SubscriptionPromo.ACTIVATIONS)
-
-

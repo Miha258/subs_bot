@@ -55,6 +55,12 @@ async def process_user_menu(query: types.CallbackQuery, state: FSMContext):
             else:
                 await query.answer("Вы использовали все 3 попытки.Попробуйте завтра", show_alert = True)
 
+
+async def use_promocode(message: types.Message, state: FSMContext):
+    await message.answer("Введите ваш промокод:")
+    await state.set_state(UserStates.PROMOCODE)
+
+
 async def buy_subscription(query_or_message: types.CallbackQuery | types.Message, state: FSMContext):
     text = "Пожалуйста выберите длительность подписки ниже:"
     if isinstance(query_or_message, types.CallbackQuery):
@@ -67,13 +73,17 @@ async def process_promocode(message: types.Message, state: FSMContext):
     code = message.text.strip()
     promocode = session.query(Promocode).filter_by(code=code).first()
 
-    if not promocode or promocode.activations_left <= 0:
+    if promocode.activations_left <= 0:
+        session.delete(promocode)
+        session.commit()
+        return await message.answer("Промокод недействителен")
+
+    if not promocode:
         await message.answer("Промокод недействителен или уже использован.")
         await state.finish()
         return
 
     user = session.query(User).filter_by(chat_id=message.from_user.id).first()
-
     if promocode.type == 'Подписка':
         if user.subscription_to and user.subscription_to > datetime.now():
             user.subscription_to += timedelta(days=promocode.days)
@@ -82,9 +92,12 @@ async def process_promocode(message: types.Message, state: FSMContext):
         user.subscription_active = True
         await message.answer(f"Ваша подписка продлена до {user.subscription_to.strftime('%Y-%m-%d')}.")
     elif promocode.type == 'Скидка':
+        if user.promo_id == promocode.id:
+            await state.finish()
+            return await message.answer(f'Вы уже используете этот промокод на скидку в <strong>{promocode.discount}%</strong>', parse_mode = "html")
         user.promo_id = promocode.id
         await message.answer("Промокод успешно применен. Скидка будет учтена при оплате.")
-
+    
     promocode.activations_left -= 1
     session.commit()
     await state.finish()
@@ -298,6 +311,7 @@ async def back_to_user_menu(query: types.CallbackQuery, state: FSMContext):
 
 def register_user(dp: Dispatcher):
     dp.register_callback_query_handler(process_user_menu, lambda cb: cb.data in ["buy_subscription", "use_promocode", "add_notion_email", "get_invite_on_tg", "get_invite_on_notion"], state = "*")
+    dp.register_message_handler(use_promocode, text = 'Использовать промокод', state = "*")
     dp.register_callback_query_handler(back_to_user_menu, lambda cb: cb.data == "back_to_user_menu", state = "*")
     dp.register_callback_query_handler(back_to_cabinet_menu, lambda cb: cb.data == "back_to_cabinet_menu", state = "*")
     dp.register_message_handler(buy_subscription, text = 'Приобрести подписку', state = "*")

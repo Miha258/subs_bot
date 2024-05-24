@@ -38,6 +38,7 @@ async def send_welcome_message(message: types.Message):
         types.KeyboardButton("Личный кабинет"),
         types.KeyboardButton("Приобрести подписку"),
         types.KeyboardButton("Что такое Dao?"),
+        types.KeyboardButton("Использовать промокод"),
         types.KeyboardButton("Помощь")
     )
     if message.from_id in admins:
