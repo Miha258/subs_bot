@@ -1,8 +1,9 @@
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+import os
 
-bot = Bot(token="7036992400:AAFSlvRteAqk4ZHTGvq2VzJWPDOmKQjdmi4")
+bot = Bot(token = os.environ.get("TOKEN"))
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage = storage)
 dp.middleware.setup(LoggingMiddleware())
