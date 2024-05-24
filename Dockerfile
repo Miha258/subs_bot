@@ -2,7 +2,7 @@
 FROM python:3.10
 
 # Set env params
-ENV TOKEN=""
+ENV TOKEN=
 
 # Set the working directory in the container
 WORKDIR /usr/src/app
