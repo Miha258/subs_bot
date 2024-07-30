@@ -1,7 +1,10 @@
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-import os
+import os, dotenv
+
+
+dotenv.load_dotenv()
 
 bot = Bot(token = os.environ.get("TOKEN"))
 storage = MemoryStorage()

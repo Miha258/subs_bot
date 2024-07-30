@@ -15,8 +15,7 @@ class UserStates(StatesGroup):
     CHOOSE_TARIF = State()
     CHOOSE_METHOD = State()
     PROCCES_PAYNAMENT = State()
-    SET_SCREENSHOT = State()
-    SET_COMMENT = State()
+    SET_PROOFS = State()
     SET_COMMENT_ADMIN = State()
 
 async def process_user_menu(query: types.CallbackQuery, state: FSMContext):
@@ -52,6 +51,7 @@ async def process_user_menu(query: types.CallbackQuery, state: FSMContext):
                 ]])
                 for admin in admins:
                     await bot.send_message(admin, f"Пользователь @{query.from_user.username} запросил инвайт на Notion на email: <strong>{user.email}</strong>", parse_mode = "html", reply_markup = kb)
+                await query.message.answer('Ожидайте пока администратор добавит вас в нотион')
             else:
                 await query.answer("Вы использовали все 3 попытки.Попробуйте завтра", show_alert = True)
 
@@ -91,7 +91,7 @@ async def process_promocode(message: types.Message, state: FSMContext):
             user.subscription_to = datetime.now() + timedelta(days=promocode.days)
             user.subscription_from = datetime.now()
         user.subscription_active = True
-        await message.answer(f"Ваша подписка продлена до {user.subscription_to.strftime('%Y-%m-%d')}.")
+        await message.answer(f"Ваша подписка продлена до <strong>{user.subscription_to.strftime('%Y-%m-%d')}</strong>", parse_mode="html")
     elif promocode.type == 'Скидка':
         if user.promo_id == promocode.id:
             await state.finish()
@@ -178,17 +178,11 @@ async def proof_paynament(query: types.CallbackQuery, state: FSMContext):
 
     if not trans.comfired:
         await state.set_data({"trans_id": trans_id})
-        await state.set_state(UserStates.SET_SCREENSHOT)
+        await state.set_state(UserStates.SET_PROOFS)
         await query.message.answer("""
 Оплатили?
 Тогда отправьте сюда, скриншот платежа либо хеш транзакции чтоб подтвердить ваш платеж.
 """)
-
-
-async def proof_paynament_text(message: types.Message, state: FSMContext):
-    await state.update_data({"screen": message.photo[0]})
-    await state.set_state(UserStates.SET_COMMENT)
-    await message.answer('Отправте коментарий:')
 
 
 async def give_for_checking(message: types.Message, state: FSMContext):
@@ -206,16 +200,21 @@ async def give_for_checking(message: types.Message, state: FSMContext):
         [types.InlineKeyboardButton("Подтвердить", callback_data=f"confirm_paynament:{trans.id}")],
         [types.InlineKeyboardButton("Отклонить с комментарием", callback_data=f"cancle_paynament:{trans.id}")],  
     ])
-    for admin in admins:
-        await bot.send_photo(admin, data["screen"].file_id, f"""
+    text = lambda admin: f"""
 Чек оплаты {message.from_user.mention}:           
 
 Способ оплаты: <strong>{admin}</strong>
 Адрес кошелька для оплаты: <pre>{method.wallet_address}</pre>
 Сумма к оплате: <strong>{tariff.amount - tariff.amount * (promo.discount / 100) if promo else tariff.amount}$ </strong>
-Коментарий: <strong>{message.text}</strong>
+Коментарий: <strong>{message.caption or message.text if (message.caption or message.text) else 'нет'}</strong>
 Промокод: <strong>{'Нет' if not promo else promo.code}</strong>
-""", reply_markup = keyboard, parse_mode = "html")
+"""
+    for admin in admins:
+        if message.photo:
+            await bot.send_photo(admin, message.photo[0].file_id, text(admin), reply_markup = keyboard, parse_mode = "html")
+        else:
+            await bot.send_message(admin, text(admin), reply_markup = keyboard, parse_mode = "html")
+    await message.answer('Ваш чек об оплате <strong>успешно</strong> отправлен администраторам, ждите подтверждения оплаты', parse_mode="html")
     await state.finish()
 
 
@@ -321,8 +320,7 @@ def register_user(dp: Dispatcher):
     dp.register_callback_query_handler(confirm_notion_invite, lambda cb: "notion_invite" in cb.data in cb.data, state = "*")
     dp.register_callback_query_handler(procces_paynament, lambda cb: cb.data == 'procces_paynament', state = UserStates.PROCCES_PAYNAMENT)
     dp.register_callback_query_handler(proof_paynament, lambda cb: 'proof_paynament' in cb.data)
-    dp.register_message_handler(proof_paynament_text, content_types = types.ContentTypes.PHOTO, state = UserStates.SET_SCREENSHOT)
-    dp.register_message_handler(give_for_checking, state = UserStates.SET_COMMENT)
+    dp.register_message_handler(give_for_checking, state = UserStates.SET_PROOFS, content_types = types.ContentTypes.PHOTO | types.ContentTypes.TEXT)
     dp.register_message_handler(process_promocode, state = UserStates.PROMOCODE)
     dp.register_message_handler(process_email, state = UserStates.ADD_EMAIL)
     dp.register_callback_query_handler(cancle_with_comment_paynament, lambda cb: 'cancle_paynament' in cb.data, state = "*")

@@ -161,9 +161,9 @@ async def check_subscription():
         if users:
             try:
                 for user in users:
-                    is_in_chat = await bot.get_chat_member(chat, user.id)
-                    if user.subscription_to < dt.datetime.now() and is_in_chat:
-                        await bot.kick_chat_member(chat, user.id)
+                    is_in_chat = await bot.get_chat_member(chat, user.chat_id)
+                    if is_in_chat:
+                        await bot.kick_chat_member(chat, user.chat_id)
                         for admin in admins:
                             try:
                                 tg_user = await bot.get_chat(user.chat_id)
@@ -173,8 +173,10 @@ async def check_subscription():
             except Exception as e:
                 print(e)
 
-schedule.daily(dt.time(hour = 23, minute=59), update_retries)
-schedule.minutely(dt.time(minute = 1), lambda: asyncio.run(check_subscription()))
+schedule.daily(dt.time(hour = 1), update_retries)
+
+loop = asyncio.get_event_loop()
+schedule.minutely(dt.time(minute=1), lambda: asyncio.run_coroutine_threadsafe(check_subscription(), loop=loop))
 
 def run_tasks():
     while True:

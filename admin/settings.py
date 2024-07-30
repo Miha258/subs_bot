@@ -24,7 +24,10 @@ async def send_settings_menu(message: types.Message, _return = False):
     chat_id = config.get('chat')
     chat = None
     if chat_id:
-        chat = await bot.get_chat(chat_id)
+        try:
+            chat = await bot.get_chat(chat_id)
+        except:
+           pass
     keyboard.add(*buttons)
     text = f"""
 Выберите параметр, который вы хотите настроить:
