@@ -2,4 +2,4 @@ aiogram==2.25.1
 SQLAlchemy==2.0.28
 scheduler==0.8.5
 python-dateutil==2.9.0
-dotenv
+python-dotenv
