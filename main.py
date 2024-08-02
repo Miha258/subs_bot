@@ -162,17 +162,16 @@ async def check_subscription():
             try:
                 for user in users:
                     is_in_chat = await bot.get_chat_member(chat, user.chat_id)
-                    print(user)
                     if is_in_chat:
-                        print(is_in_chat)
-                        if not is_in_chat.is_chat_admin():
-                            await bot.kick_chat_member(chat, user.chat_id)
-                            for admin in admins:
-                                try:
-                                    tg_user = await bot.get_chat(user.chat_id)
-                                    await bot.send_message(admin, f"У @{tg_user.username} закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
-                                except Exception:
-                                    await bot.send_message(admin, f"У пользователя закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
+                        if is_in_chat.status != "kicked" or is_in_chat.status != "banned" or is_in_chat.status != "left":
+                            if not is_in_chat.is_chat_admin():
+                                await bot.kick_chat_member(chat, user.chat_id)
+                                for admin in admins:
+                                    try:
+                                        tg_user = await bot.get_chat(user.chat_id)
+                                        await bot.send_message(admin, f"У @{tg_user.username} закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
+                                    except Exception:
+                                        await bot.send_message(admin, f"У пользователя закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
             except Exception as e:
                 print(e)
 
