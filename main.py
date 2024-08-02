@@ -164,7 +164,7 @@ async def check_subscription():
                     is_in_chat = await bot.get_chat_member(chat, user.chat_id)
                     if is_in_chat:
                         print(is_in_chat.status, is_in_chat.status == "kicked")
-                        if is_in_chat.status != "kicked" or is_in_chat.status != "banned" or is_in_chat.status != "left":
+                        if is_in_chat.status not in ("kicked", "left", "banned"):
                             if not is_in_chat.is_chat_admin():
                                 await bot.kick_chat_member(chat, user.chat_id)
                                 for admin in admins:
