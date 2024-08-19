@@ -8,6 +8,7 @@ from admin.utils import load_config
 from keyboards import *
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from dateutil.relativedelta import relativedelta
+import datetime as dt
 
 class UserStates(StatesGroup):
     PROMOCODE = State()
@@ -17,6 +18,21 @@ class UserStates(StatesGroup):
     PROCCES_PAYNAMENT = State()
     SET_PROOFS = State()
     SET_COMMENT_ADMIN = State()
+
+menu_text = lambda user, sub_to: f"""
+Статистика:
+
+Статус подписки: <strong>{"неактивна" if not user.subscription_active else "активна"}</strong>    
+Дата вступления: <strong>{user.subscription_from.strftime('%Y-%m-%d') if user.subscription_from else "нет"}</strong>
+Дата окончания подписки: <strong>{user.subscription_to.strftime('%Y-%m-%d') if user.subscription_to else "нет"}</strong>
+Осталось еще <strong>{(sub_to - datetime.now()).days}</strong> дней к окончанию подписки
+""" if (sub_to - datetime.now()).days > 0 else f"""
+Статистика:
+
+Статус подписки: <strong>{"неактивна" if not user.subscription_active else "активна"}</strong>    
+Дата вступления: <strong>{user.subscription_from.strftime('%Y-%m-%d') if user.subscription_from else "нет"}</strong>
+Дата окончания подписки: <strong>{user.subscription_to.strftime('%Y-%m-%d') if user.subscription_to else "нет"}</strong>
+"""
 
 async def process_user_menu(query: types.CallbackQuery, state: FSMContext):
     data = query.data
@@ -286,14 +302,7 @@ async def back_to_cabinet_menu(query: types.CallbackQuery, state: FSMContext):
     await state.finish()
     user = session.query(User).filter_by(chat_id = query.from_user.id).first()
     sub_to: datetime = user.subscription_to
-    text = f"""
-Статистика:
-
-Статус подписки: <strong>{"неактивна" if not user.subscription_active else "активна"}</strong>    
-Дата вступления: <strong>{user.subscription_from.strftime('%Y-%m-%d') if user.subscription_from else "нет"}</strong>
-Дата окончания подписки: <strong>{user.subscription_to.strftime('%Y-%m-%d') if user.subscription_to else "нет"}</strong>
-Осталось еще <strong>{(sub_to - datetime.now()).days}</strong> дней к окончанию подписки
-"""
+    text = menu_text(user, sub_to)
     await query.message.answer(text, get_user_panel_kb(user.subscription_active), parse_mode = "html")
     await query.message.delete()
 

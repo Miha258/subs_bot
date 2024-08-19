@@ -14,7 +14,7 @@ from admin.subs import register_subs
 from admin.settings import register_settins
 from admin.tariffs import register_tariffs
 from admin.stats import register_stats
-from user import register_user
+from user import register_user, menu_text 
 from keyboards import *
 from admin.utils import load_config
 import threading
@@ -75,23 +75,10 @@ async def process_personal_cabinet(message: types.Message, state: FSMContext):
         return await message.answer("Чтобы использовать это меню нужно приобрести подписку")
 
     sub_to: dt.datetime = user.subscription_to
-    if sub_to:
-        text = f"""
-Статистика:
-
-Статус подписки: <strong>{"неактивна" if not user.subscription_active else "активна"}</strong>    
-Дата вступления: <strong>{user.subscription_from.strftime('%Y-%m-%d') if user.subscription_from else "нет"}</strong>
-Дата окончания подписки: <strong>{user.subscription_to.strftime('%Y-%m-%d') if user.subscription_to else "нет"}</strong>
-Осталось еще <strong>{(sub_to - dt.datetime.now()).days}</strong> дней к окончанию подписки
-"""
-    else:
-        text = f"""
-Статистика:
-
-Статус подписки: <strong>{"неактивна" if not user.subscription_active else "активна"}</strong>    
-Дата вступления: <strong>{user.subscription_from.strftime('%Y-%m-%d') if user.subscription_from else "нет"}</strong>
-Дата окончания подписки: <strong>{user.subscription_to.strftime('%Y-%m-%d') if user.subscription_to else "нет"}</strong>
-"""
+    if (sub_to - dt.datetime.now()).days < 0:
+        user.subscription_active = False
+        session.commit()
+    text = menu_text(user, sub_to)
     await message.answer(text, reply_markup=get_user_panel_kb(user.subscription_active), parse_mode = "html")
 
 @dp.message_handler(lambda m: m.text == "Что такое Dao?", state="*")
