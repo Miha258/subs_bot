@@ -3,7 +3,7 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram import executor
 from scheduler import Scheduler
-import asyncio, time
+import asyncio, time, datetime
 from db import session, User
 import datetime as dt
 from create_bot import bot, dp, admins
@@ -148,19 +148,20 @@ async def check_subscription():
         if users:
             try:
                 for user in users:
-                    is_in_chat = await bot.get_chat_member(chat, user.chat_id)
-                    if is_in_chat:
-                        if is_in_chat.status not in ("kicked", "left", "banned"):
-                            if not is_in_chat.is_chat_admin():
-                                await bot.kick_chat_member(chat, user.chat_id)
-                                user.subscription_active = False
-                                session.commit()    
-                                for admin in admins:
-                                    try:
-                                        tg_user = await bot.get_chat(user.chat_id)
-                                        await bot.send_message(admin, f"У @{tg_user.username} закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
-                                    except Exception:
-                                        await bot.send_message(admin, f"У пользователя закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
+                    if user.subscription_to < datetime.datetime.now():
+                        is_in_chat = await bot.get_chat_member(chat, user.chat_id)
+                        if is_in_chat:
+                            if is_in_chat.status not in ("kicked", "left", "banned"):
+                                if not is_in_chat.is_chat_admin():
+                                    await bot.kick_chat_member(chat, user.chat_id)
+                                    user.subscription_active = False
+                                    session.commit()    
+                                    for admin in admins:
+                                        try:
+                                            tg_user = await bot.get_chat(user.chat_id)
+                                            await bot.send_message(admin, f"У @{tg_user.username} закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
+                                        except Exception:
+                                            await bot.send_message(admin, f"У пользователя закончилась подписка.Почта: <strong>{user.email}</strong>.Нужно удалить из Notion", parse_mode = "html")
             except Exception as e:
                 print(e)
 
