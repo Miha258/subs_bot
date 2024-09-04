@@ -1,6 +1,6 @@
 from db import session, User
 from create_bot import bot, admins
-from datetime import timedelta
+from datetime import timedelta, datetime
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -17,7 +17,7 @@ async def extend_subscriptions(message: types.Message, state: FSMContext):
         days_to_add = int(message.text)
         users = session.query(User).all()
         for user in users:
-            user.subscription_to = user.subscription_to + timedelta(days = days_to_add)
+            user.subscription_to = datetime.now() + timedelta(days = days_to_add)
             session.commit()
             await bot.send_message(user.chat_id, f"Ваша подписка продлена на {days_to_add} дней!")
         await state.finish()
